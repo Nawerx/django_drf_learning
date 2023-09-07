@@ -3,15 +3,39 @@ from django.forms import model_to_dict
 from django.shortcuts import render
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.views import APIView
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from django.contrib.auth import authenticate, login, logout
 
 from .serializers import UserSerializer, PostSerializer, BookmarkSerializer
 from .models import User, Post, Bookmark
+from .permissions import IsAuthorPermissions
+
+
+class LoginView(APIView):
+    def post(self, request, *args, **kwargs):
+        username = request.data.get("username")
+        password = request.data.get("password")
+
+        if not(username and password):
+            return Response({"error": "Передайте обов'язкові поля 'username' та 'password'"})
+
+        user = authenticate(username=username, password=password)
+        if not user:
+            return Response({"error": "Неправильний логін та/або пароль"})
+        login(request, user)
+        return Response({"message": f"{username}, ви успішно авторизовані"})
+
+class LogoutView(APIView):
+    def get(self, request, *args, **kwargs):
+        logout(request)
+        return Response({"message": "Ви успішно вийшли з аккаунту"})
+
 
 
 class UserView(ListAPIView):
-    permission_classes = []
-    authentication_classes = []
+    permission_classes = [IsAuthenticatedOrReadOnly]
     serializer_class = UserSerializer
     queryset = User.objects.all()
 
@@ -32,24 +56,24 @@ class UserView(ListAPIView):
 #         return Response({"posts": model_to_dict(new_post)})
 
 class PostView(ListCreateAPIView):
-    permission_classes = []
-    authentication_classes = []
+    permission_classes = [IsAuthenticatedOrReadOnly]
     serializer_class = PostSerializer
     queryset = Post.objects.all()
 
 
 class PostDetailView(RetrieveUpdateDestroyAPIView):
-    permission_classes = []
-    authentication_classes = []
+    permission_classes = [IsAuthorPermissions, IsAuthenticatedOrReadOnly]
     serializer_class = PostSerializer
     queryset = Post.objects.all()
 
 
 class BookmarkView(ListCreateAPIView):
-    permission_classes = []
-    authentication_classes = []
+    permission_classes = [IsAuthenticated]
     serializer_class = BookmarkSerializer
     queryset = Bookmark.objects.all()
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user).all()
 
     def post(self, request, *args, **kwargs):
         post_id = request.data["post"]

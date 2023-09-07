@@ -3,7 +3,7 @@ from django.db import models
 
 
 class User(AbstractUser):
-    pass
+    bookmarks = models.ManyToManyField(to="Post", through="Bookmark", through_fields=("user", "post"))
 
 
 class Post(models.Model):
@@ -23,3 +23,4 @@ class Bookmark(models.Model):
 
     post = models.ForeignKey(Post, db_column="post_id", on_delete=models.CASCADE)
     user = models.ForeignKey(User, db_column="user_id", on_delete=models.CASCADE)
+
