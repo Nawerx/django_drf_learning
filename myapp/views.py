@@ -14,6 +14,7 @@ from .permissions import IsAuthorPermissions
 
 
 class LoginView(APIView):
+
     def post(self, request, *args, **kwargs):
         username = request.data.get("username")
         password = request.data.get("password")
@@ -27,11 +28,11 @@ class LoginView(APIView):
         login(request, user)
         return Response({"message": f"{username}, ви успішно авторизовані"})
 
+
 class LogoutView(APIView):
     def get(self, request, *args, **kwargs):
         logout(request)
         return Response({"message": "Ви успішно вийшли з аккаунту"})
-
 
 
 class UserView(ListAPIView):
@@ -59,6 +60,9 @@ class PostView(ListCreateAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
     serializer_class = PostSerializer
     queryset = Post.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
 
 class PostDetailView(RetrieveUpdateDestroyAPIView):
@@ -91,7 +95,22 @@ class BookmarkView(ListCreateAPIView):
             return Response("Такого користувача або замітки не існує")
 
 
+class SignupView(APIView):
+    def post(self, request, *args, **kwargs):
+        username = request.data.get("username")
+        password = request.data.get("password")
 
+        if not (username and password):
+            return Response({"error": "Передайте обов'язкові поля 'username' та 'password'"})
+
+        try:
+            user = User.objects.create_user(username=username, password=password)
+            login(request, user)
+        except IntegrityError:
+            return Response({"error": "Користувач з такою назвую вже існує "})
+
+        else:
+            return Response({"message": "Користувач успішно створенний "})
 
 
 
