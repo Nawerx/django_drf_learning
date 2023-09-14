@@ -1,12 +1,16 @@
 from django.db import IntegrityError
 from django.forms import model_to_dict
 from django.shortcuts import render
+from django.contrib.auth import authenticate, login, logout
+
+
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.views import APIView
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
-from django.contrib.auth import authenticate, login, logout
+from rest_framework.viewsets import ModelViewSet
 
 from .serializers import UserSerializer, PostSerializer, BookmarkSerializer
 from .models import User, Post, Bookmark
@@ -56,19 +60,34 @@ class UserView(ListAPIView):
 #         )
 #         return Response({"posts": model_to_dict(new_post)})
 
-class PostView(ListCreateAPIView):
-    permission_classes = [IsAuthenticatedOrReadOnly]
+
+class MyPageNumberPaginator(PageNumberPagination):
+    page_size = 3
+    page_query_param = "page_size"
+    max_page_size = 7
+
+
+# class PostView(ListCreateAPIView):
+#     permission_classes = [IsAuthenticatedOrReadOnly]
+#     serializer_class = PostSerializer
+#     queryset = Post.objects.all()
+#     pagination_class = MyPageNumberPaginator
+#
+#     def perform_create(self, serializer):
+#         serializer.save(author=self.request.user)
+#
+#
+# class PostDetailView(RetrieveUpdateDestroyAPIView):
+#     permission_classes = [IsAuthorPermissions, IsAuthenticatedOrReadOnly]
+#     serializer_class = PostSerializer
+#     queryset = Post.objects.all()
+class PostViewSet(ModelViewSet):
+    permission_classes = [IsAuthorPermissions, IsAuthenticatedOrReadOnly]
     serializer_class = PostSerializer
     queryset = Post.objects.all()
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
-
-
-class PostDetailView(RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthorPermissions, IsAuthenticatedOrReadOnly]
-    serializer_class = PostSerializer
-    queryset = Post.objects.all()
 
 
 class BookmarkView(ListCreateAPIView):
@@ -96,6 +115,7 @@ class BookmarkView(ListCreateAPIView):
 
 
 class SignupView(APIView):
+    permission_classes = [~IsAuthenticated] # ~ not, | or, & and
     def post(self, request, *args, **kwargs):
         username = request.data.get("username")
         password = request.data.get("password")
