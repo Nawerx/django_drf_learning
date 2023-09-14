@@ -14,7 +14,7 @@ class Post(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    author = models.ForeignKey(User, db_column="author_id", on_delete=models.CASCADE)
+    author = models.ForeignKey(User, db_column="author_id", on_delete=models.CASCADE, related_name="posts")
 
 
 class Bookmark(models.Model):
