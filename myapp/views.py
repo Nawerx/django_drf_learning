@@ -3,7 +3,7 @@ from django.forms import model_to_dict
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login, logout
 
-
+from rest_framework.decorators import action
 from rest_framework import mixins
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.pagination import PageNumberPagination
@@ -90,6 +90,21 @@ class PostViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+    @action(methods=["POST", "DELETE"], detail=True)
+    def bookmarks(self, request, pk=None):
+        try:
+            post_to_bookmarks = Post.objects.get(id=pk)
+        except Post.DoesNotExist:
+            return Response({"error": "Такого користувача не існує"})
+
+        if post_to_bookmarks in request.user.bookmarks.all():
+            if request.method == "DELETE":
+                request.user.bookmarks.remove(post_to_bookmarks)
+        elif request.method == "POST":
+            request.user.bookmarks.add(post_to_bookmarks)
+        request.user.save()
+        return Response({"message": "OK"})
+
 
 class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = []
@@ -100,6 +115,22 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewS
         if self.action == "list":
             return SimpleUserSerializer
         return UserSerializer
+
+    @action(methods=["POST", "DELETE"], detail=True)
+    def follow(self, request, pk=None):
+        try:
+            user_to_follow = User.objects.get(id=pk)
+        except User.DoesNotExist:
+            return Response({"error": "Такого користувача не існує"})
+
+        if user_to_follow in request.user.following.all():
+            if request.method == "DELETE":
+                request.user.following.remove(user_to_follow)
+        elif request.method == "POST":
+            request.user.following.add(user_to_follow)
+        request.user.save()
+        return Response({"message": "OK"})
+
 
 
 class BookmarkView(ListCreateAPIView):
